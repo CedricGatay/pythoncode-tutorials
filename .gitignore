@@ -1,2 +1,6 @@
 
 machine-learning/stock-prediction/.ipynb_checkpoints/stock_prediction-checkpoint.ipynb
+handling-pdf-files/highlight-redact-text/bin/*
+handling-pdf-files/highlight-redact-text/lib/*
+handling-pdf-files/highlight-redact-text/*.pdf
+.DS_Store

@@ -49,7 +49,7 @@ def redact_matching_data(page, matched_values):
     # Loop throughout matching values
     for val in matched_values:
         matches_found += 1
-        matching_val_area = page.searchFor(val)
+        matching_val_area = page.search_for(val)
         # Redact matching values
         [page.addRedactAnnot(area, text=" ", fill=(0, 0, 0))
          for area in matching_val_area]
@@ -66,7 +66,7 @@ def frame_matching_data(page, matched_values):
     # Loop throughout matching values
     for val in matched_values:
         matches_found += 1
-        matching_val_area = page.searchFor(val)
+        matching_val_area = page.search_for(val)
         for area in matching_val_area:
             if isinstance(area, fitz.fitz.Rect):
                 # Draw a rectangle around matched values
@@ -79,7 +79,7 @@ def frame_matching_data(page, matched_values):
     return matches_found
 
 
-def highlight_matching_data(page, matched_values, type):
+def highlight_matching_data(page, matched_values, type, colors):
     """
     Highlight matching values
     """
@@ -87,11 +87,11 @@ def highlight_matching_data(page, matched_values, type):
     # Loop throughout matching values
     for val in matched_values:
         matches_found += 1
-        matching_val_area = page.searchFor(val)
+        matching_val_area = page.search_for(val)
         # print("matching_val_area",matching_val_area)
         highlight = None
         if type == 'Highlight':
-            highlight = page.addHighlightAnnot(matching_val_area)
+            highlight = page.add_highlight_annot(matching_val_area)
         elif type == 'Squiggly':
             highlight = page.addSquigglyAnnot(matching_val_area)
         elif type == 'Underline':
@@ -101,14 +101,14 @@ def highlight_matching_data(page, matched_values, type):
         else:
             highlight = page.addHighlightAnnot(matching_val_area)
         # To change the highlight colar
-        # highlight.setColors({"stroke":(0,0,1),"fill":(0.75,0.8,0.95) })
-        # highlight.setColors(stroke = fitz.utils.getColor('white'), fill = fitz.utils.getColor('red'))
-        # highlight.setColors(colors= fitz.utils.getColor('red'))
+        # highlight.set_colors({"stroke": fitz.utils.getColor(colors),"fill": fitz.utils.getColor(colors) })
+        # highlight.set_colors({"stroke":fitz.utils.getColor('red'), "fill": fitz.utils.getColor('black')}) #, fill = fitz.utils.getColor('red'))
+        highlight.set_colors(stroke= fitz.utils.getColor(colors))
         highlight.update()
     return matches_found
 
 
-def process_data(input_file: str, output_file: str, search_str: str, pages: Tuple = None, action: str = 'Highlight'):
+def process_data(input_file: str, output_file: str, search_str: str, pages: Tuple = None, action: str = 'Highlight', colors: str = "yellow"):
     """
     Process the pages of the PDF File
     """
@@ -118,7 +118,7 @@ def process_data(input_file: str, output_file: str, search_str: str, pages: Tupl
     output_buffer = BytesIO()
     total_matches = 0
     # Iterate through pages
-    for pg in range(pdfDoc.pageCount):
+    for pg in range(pdfDoc.page_count):
         # If required for specific pages
         if pages:
             if str(pg) not in pages:
@@ -127,7 +127,7 @@ def process_data(input_file: str, output_file: str, search_str: str, pages: Tupl
         page = pdfDoc[pg]
         # Get Matching Data
         # Split page by lines
-        page_lines = page.getText("text").split('\n')
+        page_lines = page.get_text("text").split('\n')
         matched_values = search_for_text(page_lines, search_str)
         if matched_values:
             if action == 'Redact':
@@ -136,10 +136,10 @@ def process_data(input_file: str, output_file: str, search_str: str, pages: Tupl
                 matches_found = frame_matching_data(page, matched_values)
             elif action in ('Highlight', 'Squiggly', 'Underline', 'Strikeout'):
                 matches_found = highlight_matching_data(
-                    page, matched_values, action)
+                    page, matched_values, action, colors)
             else:
                 matches_found = highlight_matching_data(
-                    page, matched_values, 'Highlight')
+                    page, matched_values, 'Highlight', colors)
             total_matches += matches_found
     print(f"{total_matches} Match(es) Found of Search String {search_str} In Input File: {input_file}")
     # Save to output
@@ -195,13 +195,14 @@ def process_file(**kwargs):
     pages = kwargs.get('pages')
     # Redact, Frame, Highlight, Squiggly, Underline, Strikeout, Remove
     action = kwargs.get('action')
+    colors = kwargs.get('colors')
     if action == "Remove":
         # Remove the Highlights except Redactions
         remove_highlght(input_file=input_file,
                         output_file=output_file, pages=pages)
     else:
         process_data(input_file=input_file, output_file=output_file,
-                     search_str=search_str, pages=pages, action=action)
+                     search_str=search_str, pages=pages, action=action, colors=colors)
 
 
 def process_folder(**kwargs):
@@ -256,6 +257,7 @@ def parse_args():
                         default='Highlight', help="Choose whether to Redact or to Frame or to Highlight or to Squiggly or to Underline or to Strikeout or to Remove")
     parser.add_argument('-p', '--pages', dest='pages', type=tuple,
                         help="Enter the pages to consider e.g.: [2,4]")
+    parser.add_argument('-c', '--colors', dest='colors',                         help="Enter the colors to use")
     action = parser.parse_known_args()[0].action
     if action != 'Remove':
         parser.add_argument('-s', '--search_str', dest='search_str'                            # lambda x: os.path.has_valid_dir_syntax(x)
@@ -286,7 +288,8 @@ if __name__ == '__main__':
         process_file(
             input_file=args['input_path'], output_file=args['output_file'], 
             search_str=args['search_str'] if 'search_str' in (args.keys()) else None, 
-            pages=args['pages'], action=args['action']
+            pages=args['pages'], action=args['action'],
+            colors=args['colors']
         )
     # If Folder Path
     elif os.path.isdir(args['input_path']):
